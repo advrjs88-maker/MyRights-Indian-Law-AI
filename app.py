@@ -9,14 +9,24 @@ import re
 # Page Configuration
 st.set_page_config(page_title="MyRights AI", page_icon="⚖️", layout="centered")
 
-# --- CSS TO HIDE STREAMLIT FOOTER & MENU ---
+# --- ADVANCED CSS TO REMOVE ALL STREAMLIT BRANDING ---
+# Ye code footer, header, menu aur extra padding ko puri tarah khatam kar dega
 hide_st_style = """
             <style>
+            /* Hide Streamlit components */
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
-            .st-emotion-cache-16umgz6 {visibility: hidden;} /* Deploy button hide */
+            #stDecoration {display:none;}
+            [data-testid="stHeader"] {display:none;}
+            [data-testid="stFooter"] {display:none;}
+            [data-testid="stToolbar"] {display:none;}
             
+            /* Remove extra padding from top */
+            .st-emotion-cache-18ni73i {padding-top: 0rem;}
+            .st-emotion-cache-z5fcl4 {padding-top: 0rem;}
+            
+            /* Professional Typography */
             @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
             
             .main {
@@ -28,12 +38,11 @@ hide_st_style = """
                 line-height: 1.6;
                 color: #1a1a1a;
                 background-color: white;
-                padding: 50px;
-                border-radius: 2px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
                 border: 1px solid #cfd8dc;
                 margin-top: 20px;
-                min-height: 600px;
                 white-space: pre-wrap;
             }
             .legal-document strong {
@@ -53,7 +62,7 @@ else:
     st.sidebar.success("System Ready ✅")
 
 # Branding Header
-st.markdown("<h1 style='text-align: center; margin-bottom: 0; color: #1e3a8a;'>MyRights AI</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 0; color: #1e3a8a; padding-top: 0;'>MyRights AI</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-style: italic; color: #4b5563; margin-top: 0;'>Legal drafting & research system</p>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-size: 11px; font-weight: bold; color: #6b7280; letter-spacing: 0.2em; text-transform: uppercase;'>Created by R.J. Sharma, Advocate</p>", unsafe_allow_html=True)
 st.divider()
@@ -77,24 +86,13 @@ if generate_btn:
         try:
             client = Groq(api_key=api_key)
             
-            # Formatting logic including Legal Notice Layout Instructions
+            # Formatting instructions based on legal standards
             system_instr = """
-            Tum 'MyRights AI' ho. 
+            Tum 'MyRights AI' ho.
             
-            1. LEGAL NOTICE RULES:
-               - Heading: "LEGAL NOTICE" (Bold/Capital/Center).
-               - Reference No, Date, Place.
-               - Subject Line: RE: [Issue] (Bold/Underlined).
-               - Opening: "Under instructions from my client [Name]..."
-               - FORMAT: Numbered Paragraphs (Background, Issue, Breach, Final Attempt).
-               - Demand Clause: Clear deadline (15/30 days) and warning.
-               - Sign-off: "Yours faithfully" and include "WITHOUT PREJUDICE".
-
-            2. PETITION/DRAFT RULES:
-               - Court Name -> Case No -> Parties -> Title -> Numbered Facts -> Prayer -> Verification -> Date -> Place.
-
-            3. BARE ACT/RESEARCH:
-               - Professional book format with Classification Table (Bailable, Cognizable etc.).
+            1. LEGAL NOTICE: Heading bold/center. Ref No, Date, Subject (Bold/Underlined). Opening clause mandatory. Numbered Paras. Demand Clause with deadline. Sign-off with 'WITHOUT PREJUDICE'.
+            2. PETITION: Court Name -> Case No -> Parties -> Title -> Facts (Numbered) -> Prayer -> Verification -> Date -> Place.
+            3. BARE ACT: Section text, Provisos, Classification Table (Bailable, Cognizable etc.), Commentary, and Landmark Judgments.
 
             STRICT: Text JUSTIFIED, Citations BOLD.
             """
@@ -109,6 +107,7 @@ if generate_btn:
                 )
                 
                 output_text = completion.choices[0].message.content
+                # Safer HTML parsing
                 safe_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', output_text)
                 safe_html = safe_html.replace("\n", "<br>")
                 
