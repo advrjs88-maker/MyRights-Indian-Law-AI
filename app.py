@@ -1,71 +1,129 @@
 import streamlit as st
-from groq import Groq
+import openai
+import os
 
-# Page Setup
-st.set_page_config(page_title="MyRights Legal AI Assistance", layout="wide")
+# Page Configuration
+st.set_page_config(page_title="MyRights AI", page_icon="⚖️", layout="centered")
 
-# Custom CSS for Professional Formatting
+# Custom CSS for Legal Formatting (Justified Text & Times New Roman)
 st.markdown("""
     <style>
-    .reportview-container .main .block-container { padding-top: 1rem; }
-    .legal-body { text-align: justify; line-height: 1.6; font-family: 'Times New Roman', Times, serif; }
-    .center-text { text-align: center; font-weight: bold; text-transform: uppercase; }
-    .bold-cite { font-weight: bold; color: #1a1a1a; }
+    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+    
+    .main {
+        background-color: #f8fafc;
+    }
+    .legal-document {
+        font-family: 'Times New Roman', Times, serif;
+        text-align: justify;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background-color: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+    }
+    .legal-document strong {
+        font-weight: bold;
+        color: #000;
+    }
+    h1, h2, h3 {
+        color: #1e3a8a !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("⚖️ MyRights Legal AI Assistance")
+# Branding Header
+st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>MyRights AI</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-style: italic; color: #4b5563; margin-top: 0;'>Legal drafting & research system</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 10px; font-weight: bold; color: #6b7280; letter-spacing: 0.2em; text-transform: uppercase;'>Created by R.J. Sharma, Advocate</p>", unsafe_allow_html=True)
+st.divider()
 
-# --- INPUT SECTION AT TOP ---
-api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
-
-if api_key:
-    client = Groq(api_key=api_key)
+# Input Section
+with st.container():
+    col1, col2 = st.columns(2)
     
-    # Search Bar at Top
-    prompt = st.chat_input("Search Section, Draft Petition, or Legal Notice...")
+    with col1:
+        category = st.selectbox(
+            "Select Category",
+            [
+                "1. Pleading & Petition",
+                "2. formal Legal Notice",
+                "3. Deed & Agreement",
+                "4. Bare Act & Legal Research",
+                "5. Landmark Judgement & Citation"
+            ]
+        )
+        
+    with col2:
+        topic = st.text_input("Subject / Legal Provision", placeholder="e.g. Section 138 NI Act")
 
-    if prompt:
-        with st.spinner("Processing Legal Draft..."):
-            # SYSTEM INSTRUCTIONS
-            instructions = """
-            You are 'MyRights Legal AI Assistance'. Strictly follow these formatting rules:
-            1. LANGUAGE: English only.
-            2. IF PETITION: Use this EXACT header:
-               [CENTER] IN THE COURT OF [COURT NAME], [CITY]
-               [CENTER] Case No. __________ of [YEAR]
-               
-               [Petitioner Name/Address] ... Petitioner
-               [CENTER] VERSUS
-               [Respondent Name/Address] ... Respondent
-               
-               [CENTER] [TITLE OF PETITION IN CAPITAL]
-               
-               Respected Sir,
-               Most Respectfully showeth-
-            3. NUMBERING: Start every new point/paragraph from a NEW LINE.
-            4. CITATIONS: Landmark judgments must be **BOLD**. Example: **Kesavananda Bharati v. State of Kerala (1973)**.
-            5. AMENDMENTS: Mention 2023-24 changes (BNS/BNSS) only if confirmed. No hallucinations.
-            6. ALIGNMENT: The output for body text must be structured for JUSTIFIED alignment.
-            7. NO HEADER FOR SECTIONS: If user asks for a Section/Act, do NOT use 'In the Court of'. Start directly with the Provision.
-            """
+    facts = st.text_area("Facts / Points to be Included", height=150, placeholder="Yahan case ke facts aur points likhein...")
 
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": instructions},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1,
-            )
-            
-            response = completion.choices[0].message.content
-            
-            # --- OUTPUT SECTION BELOW ---
-            st.markdown("---")
-            # Using a container for Justified alignment
-            st.markdown(f'<div class="legal-body">{response.replace("\n", "<br>")}</div>', unsafe_allow_html=True)
-
-else:
-    st.info("👈 Please enter your Groq API Key in the sidebar to start.")
+    # API Key Configuration (Streamlit Secrets ya Sidebar)
+    # Agar aapne environment variable set nahi kiya hai toh sidebar se le sakte hain
+    api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
     
+    generate_btn = st.button("GENERATE LEGAL TEXT", use_container_width=True)
+
+# Logic Section
+if generate_btn:
+    if not api_key:
+        st.error("Kripya OpenAI API Key enter karein.")
+    elif not topic or not facts:
+        st.warning("Kripya Subject aur Facts dono bharein.")
+    else:
+        try:
+            client = openai.OpenAI(api_key=api_key)
+            
+            # Formatting Instructions based on Category
+            prompts = {
+                "1. Pleading & Petition": "Draft a Pleading & Petition. Use court format: jurisdiction, parties, numbered paragraphs for facts, legal grounds, and prayer clause.",
+                "2. formal Legal Notice": "Draft a formal Legal Notice. Include Ref No, Date, Recipient, 'Under Instructions' clause, facts, breach, 15/30 days demand, and legal warning.",
+                "3. Deed & Agreement": "Draft a Deed & Agreement. Include Title, Date, Parties, Recitals (Whereas clauses), Terms, Termination, and Jurisdiction.",
+                "4. Bare Act & Legal Research": "Provide Bare Act details. Break down sections point-wise like law books. Explain provisions in detail.",
+                "5. Landmark Judgement & Citation": "Provide Landmark Judgement & Citation. Summarize ratio decidendi point-wise."
+            }
+
+            system_instr = f"{prompts[category]} STRICT RULES: Text must be JUSTIFIED. ALL LANDMARK JUDGEMENTS & CITATIONS MUST BE BOLD. Use point-wise and number-wise structure. Each point starts on a NEW LINE. Use professional legal language."
+
+            with st.spinner("AI legal draft taiyar kar raha hai..."):
+                response = client.chat.completions.create(
+                    model="gpt-4", # Ya "gpt-3.5-turbo"
+                    messages=[
+                        {"role": "system", "content": system_instr},
+                        {"role": "user", "content": f"Subject: {topic}\nFacts: {facts}"}
+                    ]
+                )
+                
+                legal_text = response.choices[0].message.content
+                
+                # Output Section
+                st.subheader("Generated Legal Draft")
+                
+                # Markdown ko justified HTML mein convert karna
+                # Bold markdown (**) ko strong tags mein badalna
+                formatted_text = legal_text.replace("**", "<strong>").replace("**", "</strong>")
+                formatted_text = formatted_text.replace("\n", "<br>")
+                
+                st.markdown(f"""
+                    <div class="legal-document">
+                        {formatted_text}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Download Button
+                st.download_button(
+                    label="Download as Text File",
+                    data=legal_text,
+                    file_name=f"{topic}_draft.txt",
+                    mime="text/plain"
+                )
+
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+# Footer
+st.divider()
+st.caption("Note: Yeh AI-generated draft hai. Kripya use karne se pehle legal review zaroori hai.")
