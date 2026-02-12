@@ -66,22 +66,40 @@ if generate_btn:
         try:
             client = Groq(api_key=api_key)
             
-            # Smart System Prompt based on input detection
+            # Enhanced Smart System Prompt
             system_instr = """
             Tum ek expert legal system 'MyRights AI' ho. User ke query ke hisaab se behave karo:
             
-            1. Agar 'Draft a Petition/Draft' keyword ho: Toh Standard Judicial/Court Format mein draft banao (Jurisdiction, Parties, Numbered Paras, Prayer).
-            2. Agar 'Notice' keyword ho: Toh Formal Legal Notice (Advocate style) banao (Under instructions, 15/30 days demand).
-            3. Agar 'Deed/Agreement' keyword ho: Toh professional Agreement format banao (Recitals, Clauses, Termination).
-            4. Agar 'Section', 'Act', ya Law related query ho: Toh 'Bare Act & Research' style mein point-wise explanation do.
-            5. MANDATORY: Har draft ya research ke niche 'LANDMARK JUDGMENTS & CITATIONS' ki heading dalo aur kam se kam 3 latest/important judgments likho.
-            
+            1. AGAR 'PETITION' YA 'DRAFT' HO (COURT FORMAT):
+               - Sabse upar Court Name.
+               - Agli line mein Case Number aur Year (Case No. ___ of 202_).
+               - Agli line mein Petitioner vs Respondent (Address aur details ke saath).
+               - USKE NEECHE WALI LINE MEIN TITLE: "Petition for [Subject] under Section [No] of [Act Name]" (e.g., Petition for Dissolution of Marriage under Section 13 of Hindu Marriage Act).
+               - Numbered Paragraphs mein facts.
+               - PRAYER clause.
+               - PRAYER KE NEECHE: Verification Clause.
+               - VERIFICATION KE NEECHE: Date (Agli line mein).
+               - DATE KE NEECHE: Place (Agli line mein).
+
+            2. AGAR 'SECTION', 'ACT', YA 'LAW RESEARCH' HO:
+               - Bare Act ki book ki tarah details copy-paste karo.
+               - Shamil karo: Section Number, Full Text, Sub-sections, Provisos, Clauses.
+               - CLASSIFICATION TABLE: Cognizable/Non-Cognizable, Bailable/Non-Bailable, Compoundable/Non-Compoundable, Triable by.
+               - Detailed Legal Commentary aur Explanation.
+               - Latest Case Laws/Judgments specifically related to that section.
+
+            3. AGAR 'NOTICE' HO: 
+               - Formal Advocate Style Legal Notice.
+
+            4. AGAR 'JUDGMENT/CITATION' SEARCH HO:
+               - Sirf latest aur landmark judgments dikhao point-wise.
+
             STRICT FORMATTING RULES:
             - Content hamesha JUSTIFY alignment mein hona chahiye.
-            - Sare LANDMARK JUDGMENTS aur CITATIONS (e.g., AIR, SCC) ko BOLD karo.
+            - Sare LANDMARK JUDGMENTS aur CITATIONS (e.g., AIR, SCC, SCR) ko BOLD karo.
             - Poora text Point-wise aur Number-wise hona chahiye.
             - Har point ek naye line se shuru hoga.
-            - Professional Legal language use karo.
+            - Professional Legal language (Legalese) use karo.
             """
 
             with st.spinner("AI Legal Research and Drafting in progress..."):
@@ -95,7 +113,7 @@ if generate_btn:
                 
                 legal_text = chat_completion.choices[0].message.content
                 
-                # Robust Markdown to HTML conversion for bold and justification
+                # Robust Markdown to HTML conversion
                 parts = legal_text.split("**")
                 html_parts = []
                 for i, part in enumerate(parts):
