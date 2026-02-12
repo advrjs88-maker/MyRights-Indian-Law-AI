@@ -1,8 +1,8 @@
 import streamlit as st
 try:
-    import openai
+    from groq import Groq
 except ImportError:
-    st.error("Missing dependency: Please install 'openai' using 'pip install openai'")
+    st.error("Missing dependency: Please install 'groq' using 'pip install groq'")
 import os
 
 # Page Configuration
@@ -62,25 +62,26 @@ with st.container():
     with col2:
         topic = st.text_input("Subject / Legal Provision", placeholder="e.g. Section 138 NI Act")
 
-    facts = st.text_area("Facts / Points to be Included", height=150, placeholder="Yahan case ke facts aur points likhein...")
+    facts = st.text_area("Facts / Points to be Included", height=150, placeholder="Case ke facts aur points yahan likhein...")
 
-    # API Key Configuration (Streamlit Secrets ya Sidebar)
-    api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
+    # Groq API Key Configuration
+    api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
+    model_choice = st.sidebar.selectbox("Choose Model", ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"])
     
     generate_btn = st.button("GENERATE LEGAL TEXT", use_container_width=True)
 
 # Logic Section
 if generate_btn:
     if not api_key:
-        st.error("Kripya OpenAI API Key enter karein.")
+        st.error("Kripya Groq API Key sidebar mein enter karein.")
     elif not topic or not facts:
         st.warning("Kripya Subject aur Facts dono bharein.")
     else:
         try:
-            # Initialize client for OpenAI v1.0.0+
-            client = openai.OpenAI(api_key=api_key)
+            # Initialize Groq client
+            client = Groq(api_key=api_key)
             
-            # Formatting Instructions based on Category
+            # Formatting Instructions
             prompts = {
                 "1. Pleading & Petition": "Draft a Pleading & Petition. Use court format: jurisdiction, parties, numbered paragraphs for facts, legal grounds, and prayer clause.",
                 "2. formal Legal Notice": "Draft a formal Legal Notice. Include Ref No, Date, Recipient, 'Under Instructions' clause, facts, breach, 15/30 days demand, and legal warning.",
@@ -91,40 +92,56 @@ if generate_btn:
 
             system_instr = f"{prompts[category]} STRICT RULES: Text must be JUSTIFIED. ALL LANDMARK JUDGEMENTS & CITATIONS MUST BE BOLD. Use point-wise and number-wise structure. Each point starts on a NEW LINE. Use professional legal language."
 
-            with st.spinner("AI legal draft taiyar kar raha hai..."):
-                response = client.chat.completions.create(
-                    model="gpt-4",
+            with st.spinner("Groq AI drafting process mein hai..."):
+                chat_completion = client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_instr},
                         {"role": "user", "content": f"Subject: {topic}\nFacts: {facts}"}
-                    ]
+                    ],
+                    model=model_choice,
                 )
                 
-                legal_text = response.choices[0].message.content
+                legal_text = chat_completion.choices[0].message.content
                 
                 # Output Section
                 st.subheader("Generated Legal Draft")
                 
                 # Formatting Markdown Bold to HTML Strong
-                formatted_text = legal_text.replace("**", "<strong>").replace("**", "</strong>")
-                formatted_text = formatted_text.replace("\n", "<br>")
+                # This ensures the 'BOLD' requirement is rendered correctly in the justified div
+                formatted_text = legal_text.replace("**", "<strong>", 1)
+                while "**" in formatted_text:
+                    if "<strong>" in formatted_text.split("**")[-1]: # check odd/even
+                        formatted_text = formatted_text.replace("**", "</strong>", 1)
+                    else:
+                        formatted_text = formatted_text.replace("**", "<strong>", 1)
+                
+                # Correcting simple replacement for reliable bolding
+                parts = legal_text.split("**")
+                html_parts = []
+                for i, part in enumerate(parts):
+                    if i % 2 == 1:
+                        html_parts.append(f"<strong>{part}</strong>")
+                    else:
+                        html_parts.append(part)
+                
+                final_html = "".join(html_parts).replace("\n", "<br>")
                 
                 st.markdown(f"""
                     <div class="legal-document">
-                        {formatted_text}
+                        {final_html}
                     </div>
                     """, unsafe_allow_html=True)
                 
                 st.download_button(
-                    label="Download as Text File",
+                    label="Download Draft",
                     data=legal_text,
-                    file_name=f"{topic}_draft.txt",
+                    file_name=f"{topic}_legal_draft.txt",
                     mime="text/plain"
                 )
 
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Groq API Error: {str(e)}")
 
 # Footer
 st.divider()
-st.caption("Note: Yeh AI-generated draft hai. Kripya use karne se pehle legal review zaroori hai.")
+st.caption(f"MyRights AI v2.0 | Powered by Groq | Created by R.J. Sharma, Advocate")
