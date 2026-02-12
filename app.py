@@ -1,49 +1,59 @@
 import streamlit as st
 from groq import Groq
 
-# Page Setup
-st.set_page_config(page_title="Nyaya-AI: Indian Law Assistant", page_icon="⚖️")
-st.title("⚖️ Nyaya-AI: Indian Law & Petition Drafter")
+# Page configuration
+st.set_page_config(page_title="MyRights Legal AI Assistance", page_icon="⚖️", layout="wide")
+
+# App Name
+st.title("⚖️ MyRights Legal AI Assistance")
+st.caption("Professional Indian Legal Drafting & Research Portal")
 
 # Sidebar for API Key
-api_key = st.sidebar.text_input("Apni Groq API Key yahan dalein:", type="password")
+api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
 
 if api_key:
     client = Groq(api_key=api_key)
 
-    # Sidebar Options
-    mode = st.sidebar.selectbox("Kya karna chahte hain?", ["Legal Advice", "Petition Drafting"])
-
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Chat History display
+    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # User Input
-    if prompt := st.chat_input("Apna sawal likhein ya petition ki details dein..."):
+    # Search Bar
+    if prompt := st.chat_input("Search Section, Draft Petition, or Legal Notice..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # AI Logic
         with st.chat_message("assistant"):
-            # System Prompt for Legal Context
-            system_prompt = "You are an expert Indian Legal Assistant. Knowledgeable in BNS, IPC, and Constitution of India. Provide advice with a disclaimer that you are an AI, not a lawyer. If drafting, use professional legal format."
-            
-            full_prompt = f"{system_prompt}\nUser Request: {prompt}"
+            # STRICT LEGAL INSTRUCTIONS - NO HINDI, NO CONVERSATION
+            instructions = """
+            You are 'MyRights Legal AI Assistance', a Senior Indian Legal Expert. 
+            Strictly follow these response protocols:
+            1. LANGUAGE: Use ONLY professional English. Do not use Hindi or any other language.
+            2. PETITIONS: Start directly with 'IN THE COURT OF...'. Use standard court formatting with [Bracketed Placeholders] for facts.
+            3. LEGAL NOTICE: Provide a formal notice from an Advocate's perspective. Include 'Under instructions from my client...'
+            4. BARE ACT/SECTIONS: Provide the exact legal provision, details of the latest 2023-24 amendments (BNS/BNSS/BSA), and cite at least 2 landmark Supreme Court/High Court judgments.
+            5. DEEDS/AGREEMENTS: Provide a complete, ready-to-use legal draft.
+            6. NO PROAMBLE: Do not say 'Sure', 'I can help', 'Here is your draft', or 'Disclaimer'. Start directly with the legal text.
+            7. NO CONVERSATION: Do not engage in small talk. Focus only on the legal output requested.
+            """
             
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile", # Super fast and powerful
-                messages=[{"role": "user", "content": full_prompt}],
-                temperature=0.7,
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1, # Lowest temperature for maximum accuracy and zero creativity
             )
             
             response = completion.choices[0].message.content
             st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
 else:
-    st.warning("Please enter your Groq API Key in the sidebar to start.")
-  
+    st.info("👈 Please enter your Groq API Key in the sidebar to activate MyRights Legal AI.")
+    
