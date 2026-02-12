@@ -1,5 +1,8 @@
 import streamlit as st
-import openai
+try:
+    import openai
+except ImportError:
+    st.error("Missing dependency: Please install 'openai' using 'pip install openai'")
 import os
 
 # Page Configuration
@@ -62,7 +65,6 @@ with st.container():
     facts = st.text_area("Facts / Points to be Included", height=150, placeholder="Yahan case ke facts aur points likhein...")
 
     # API Key Configuration (Streamlit Secrets ya Sidebar)
-    # Agar aapne environment variable set nahi kiya hai toh sidebar se le sakte hain
     api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
     
     generate_btn = st.button("GENERATE LEGAL TEXT", use_container_width=True)
@@ -75,6 +77,7 @@ if generate_btn:
         st.warning("Kripya Subject aur Facts dono bharein.")
     else:
         try:
+            # Initialize client for OpenAI v1.0.0+
             client = openai.OpenAI(api_key=api_key)
             
             # Formatting Instructions based on Category
@@ -90,7 +93,7 @@ if generate_btn:
 
             with st.spinner("AI legal draft taiyar kar raha hai..."):
                 response = client.chat.completions.create(
-                    model="gpt-4", # Ya "gpt-3.5-turbo"
+                    model="gpt-4",
                     messages=[
                         {"role": "system", "content": system_instr},
                         {"role": "user", "content": f"Subject: {topic}\nFacts: {facts}"}
@@ -102,8 +105,7 @@ if generate_btn:
                 # Output Section
                 st.subheader("Generated Legal Draft")
                 
-                # Markdown ko justified HTML mein convert karna
-                # Bold markdown (**) ko strong tags mein badalna
+                # Formatting Markdown Bold to HTML Strong
                 formatted_text = legal_text.replace("**", "<strong>").replace("**", "</strong>")
                 formatted_text = formatted_text.replace("\n", "<br>")
                 
@@ -113,7 +115,6 @@ if generate_btn:
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Download Button
                 st.download_button(
                     label="Download as Text File",
                     data=legal_text,
