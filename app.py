@@ -4,6 +4,7 @@ try:
 except ImportError:
     st.error("Missing dependency: Please install 'groq' using 'pip install groq'")
 import os
+import re
 
 # Page Configuration
 st.set_page_config(page_title="MyRights AI", page_icon="⚖️", layout="centered")
@@ -28,6 +29,7 @@ st.markdown("""
         border: 1px solid #cfd8dc;
         margin-top: 20px;
         min-height: 600px;
+        white-space: pre-wrap; /* Preserve formatting while keeping it safe */
     }
     .legal-document strong {
         font-weight: bold;
@@ -39,13 +41,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- API KEY HANDLING (Baar baar dalne se bachne ke liye) ---
-# Streamlit Secrets (share.streamlit.io settings mein set karein)
+# --- API KEY HANDLING ---
 api_key = st.secrets.get("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
 
 if not api_key:
     api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
-    st.sidebar.warning("Tip: Settings -> Secrets mein 'GROQ_API_KEY' set karein.")
 else:
     st.sidebar.success("API Key loaded from Secrets ✅")
 
@@ -56,7 +56,7 @@ st.markdown("<p style='text-align: center; font-size: 11px; font-weight: bold; c
 st.divider()
 
 # Input UI
-user_query = st.text_area("Type your request (e.g., 'Draft a divorce petition', 'Section 498A IPC', 'Maintenance judgments')", 
+user_query = st.text_area("Type your request (e.g., 'Draft a divorce petition', 'Section 498A IPC')", 
                          placeholder="Example: Draft a notice for recovery of money...",
                          height=150)
 
@@ -75,35 +75,26 @@ if generate_btn:
             client = Groq(api_key=api_key)
             
             system_instr = """
-            Tum 'MyRights AI' ho, ek professional legal drafting aur research system.
+            Tum 'MyRights AI' ho, ek professional legal system.
             
-            USER INTENT RULES:
-            1. AGAR 'PETITION' ya 'DRAFT' ho (STRICT COURT FORMAT): 
-               - Court Name (IN THE COURT OF...)
-               - Case No. ___ of 202_ (Next line)
-               - Petitioner vs Respondent details (Next line)
-               - TITLE LINE: "Petition for [Subject] under Section [No] of [Act]"
-               - Detailed Numbered paragraphs for facts.
-               - PRAYER Clause.
-               - VERIFICATION Clause (Next line after prayer).
-               - Date: _________ (Next line)
-               - Place: _________ (Next line)
+            FORMATTING RULES:
+            1. AGAR 'PETITION' ya 'DRAFT' ho: 
+               - Court Name
+               - Case No. ___ of 202_
+               - Petitioner vs Respondent
+               - TITLE: "Petition for [Subject] under Section [No] of [Act]"
+               - Facts, Prayer, Verification.
+               - Date and Place line-by-line at the end.
 
-            2. AGAR 'SECTION' ya 'ACT' ya 'SEARCH' ho:
-               - BARE ACT Book Format: Section Number, Full Text, Sub-sections, Provisos exactly as per law books.
-               - CLASSIFICATION TABLE: Cognizable/Non-Cognizable, Bailable/Non-Bailable, Compoundable/Non-Compoundable, Punishment details.
-               - Legal Commentary/Explanation and latest Case Laws related to that specific section.
+            2. AGAR 'SECTION/ACT' ho:
+               - Bare Act Book Format (Full Text, Provisos).
+               - CLASSIFICATION TABLE: Cognizable, Bailable, etc.
+               - Commentary and Landmark Judgments.
 
-            3. AGAR 'JUDGMENT' ya 'CITATION' ho:
-               - Point-wise latest Landmark Judgments with bold Citations.
-
-            FORMATTING MANDATE:
-            - Content MUST be JUSTIFIED.
-            - ALL LANDMARK JUDGMENTS and CITATIONS (AIR, SCC, etc.) MUST be BOLD (<strong>).
-            - Professional Legalese language only.
+            STRICT: Content JUSTIFY hona chahiye. Case Laws aur Citations BOLD hone chahiye.
             """
 
-            with st.spinner("Analyzing legal provisions and drafting..."):
+            with st.spinner("Analyzing legal provisions..."):
                 completion = client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_instr},
@@ -114,25 +105,24 @@ if generate_btn:
                 
                 output_text = completion.choices[0].message.content
                 
-                # Conversion to HTML for justification and bolding
-                parts = output_text.split("**")
-                html_formatted = ""
-                for i, part in enumerate(parts):
-                    if i % 2 == 1:
-                        html_formatted += f"<strong>{part}</strong>"
-                    else:
-                        html_formatted += part
+                # FIX: Safer Markdown to HTML conversion to avoid 'InvalidCharacterError'
+                # Replace **text** with <strong>text</strong> using Regex
+                safe_html = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', output_text)
                 
-                final_html = html_formatted.replace("\n", "<br>")
+                # Convert newlines to <br> for HTML rendering
+                safe_html = safe_html.replace("\n", "<br>")
                 
-                # Render Document
-                st.markdown(f'<div class="legal-document">{final_html}</div>', unsafe_allow_html=True)
+                # Render Document safely
+                st.markdown(f'''
+                    <div class="legal-document">
+                        {safe_html}
+                    </div>
+                ''', unsafe_allow_html=True)
                 
-                # Action Buttons
                 st.download_button("Download Document (.txt)", output_text, file_name="MyRights_AI_Output.txt")
 
         except Exception as e:
             st.error(f"System Error: {str(e)}")
 
 st.divider()
-st.caption("Legal Disclaimer: Research generated by AI should be verified by a legal professional before filing.")
+st.caption("Legal Disclaimer: Research generated by AI should be verified by a legal professional.")
